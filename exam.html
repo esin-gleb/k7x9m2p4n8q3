@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0066cc">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Экзамен · Тесты АиР</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,system-ui,sans-serif;max-width:720px;margin:0 auto;padding:12px;background:#f2f4f7;color:#1a1a1a;line-height:1.5}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.back{background:#fff;border:1.5px solid #ddd;border-radius:8px;padding:8px 12px;font-size:15px;font-weight:600;cursor:pointer;color:#333;text-decoration:none}
+h1{font-size:20px;margin:0;flex:1}
+.progress-wrap{height:6px;background:#e0e0e0;border-radius:3px;margin-bottom:12px;overflow:hidden}
+.progress-bar{height:100%;background:#8b1a1a;transition:width .3s}
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px}
+.scen{font-size:15px;margin-bottom:14px;white-space:pre-wrap}
+.q{font-weight:600;font-size:16px;margin-bottom:14px}
+.opt{display:block;width:100%;text-align:left;padding:12px 14px;margin:6px 0;background:#fafafa;border:1.5px solid #ddd;border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;color:#222}
+.opt.correct{background:#d4edda;border-color:#28a745}
+.opt.wrong{background:#f8d7da;border-color:#dc3545}
+.opt.disabled{cursor:default}
+.nav{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:14px;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;background:#0066cc}
+.btn.secondary{background:#666}
+.btn.green{background:#28a745}
+.btn.yellow{background:#f0ad00;color:#fff}
+.btn.dark{background:#8b1a1a}
+.result{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.score{font-size:48px;font-weight:700;margin:12px 0}
+.score.g{color:#28a745}.score.y{color:#e69500}.score.r{color:#dc3545}
+.verdict{font-size:16px;color:#555;margin-bottom:14px}
+.review{text-align:left;margin-top:20px}
+.review-item{border-left:4px solid #dc3545;padding:10px 12px;margin:8px 0;background:#fff5f5;border-radius:4px;font-size:14px}
+.review-item .ck{color:#28a745;margin-top:6px;font-weight:600}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#555}
+.exam-history{background:#fff;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#555}
+.history-item{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #eee}
+.history-item:first-child{border-top:none}
+.intro{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-align:center}
+.intro p{color:#555;margin:10px 0}
+</style>
+</head><body>
+
+<div class="header">
+  <a class="back" href="index.html">← Темы</a>
+  <h1>🎓 Экзамен</h1>
+</div>
+
+<div id="topbarWrap" style="display:none">
+  <div class="progress-wrap"><div class="progress-bar" id="pbar" style="width:0%"></div></div>
+  <div class="topbar"><span id="progressText"></span><span id="scoreLive"></span></div>
+</div>
+
+<div id="stage">Загрузка…</div>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(console.error))}
+
+const EXAM_SIZE = 100;
+const HISTORY_KEY = 'exam_history';
+
+let ALL_ITEMS = [];
+let deck = [], idx = 0, wrong = [], answered = false;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function norm(s){return s.replace(/\s+/g,' ').trim().toLowerCase()}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function colorFor(pct){if(pct>=80)return 'g';if(pct>=70)return 'y';return 'r'}
+
+function loadHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||[]}catch(e){return []}}
+function saveResult(right,total){
+  const h = loadHistory();
+  h.unshift({right,total,pct:Math.round(100*right/total),date:new Date().toISOString()});
+  if(h.length>10) h.length=10;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+}
+
+function showIntro(){
+  const h = loadHistory();
+  const total = ALL_ITEMS.length;
+  const examSize = Math.min(EXAM_SIZE, total);
+  let historyHtml = '';
+  if(h.length){
+    historyHtml = '<div class="exam-history"><b>Прошлые попытки:</b>';
+    h.forEach(r=>{
+      const c = colorFor(r.pct);
+      const d = new Date(r.date).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      historyHtml += `<div class="history-item"><span>${d}</span><span class="${c}"><b>${r.right}/${r.total}</b> (${r.pct}%)</span></div>`;
+    });
+    historyHtml += '</div>';
+  }
+  document.getElementById('stage').innerHTML = `
+    ${historyHtml}
+    <div class="intro">
+      <h2 style="margin-top:0">Тестовый экзамен</h2>
+      <p>${examSize} случайных вопросов из всех тем.<br>Всего в базе: ${total} уникальных задач.</p>
+      <p style="color:#888;font-size:13px">Порог «Московский врач»: 80% правильных.</p>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn dark" onclick="startExam()">Начать экзамен</button>
+      </div>
+    </div>`;
+}
+
+function startExam(){
+  document.getElementById('topbarWrap').style.display='block';
+  const pool = shuffle([...ALL_ITEMS]);
+  deck = pool.slice(0, Math.min(EXAM_SIZE, pool.length));
+  idx=0; wrong=[]; render();
+}
+
+function updateProgress(){
+  const pct=Math.round(100*idx/deck.length);
+  document.getElementById('pbar').style.width=pct+'%';
+  document.getElementById('progressText').textContent=`${idx+1} / ${deck.length}`;
+  const right = idx - wrong.length;
+  const c = idx>0 ? colorFor(Math.round(100*right/idx)) : '';
+  document.getElementById('scoreLive').innerHTML = idx>0 ? `<span class="${c}">✓ ${right} / ✗ ${wrong.length}</span>` : '';
+}
+
+function render(){
+  answered=false;
+  updateProgress();
+  const item=deck[idx];
+  const shuffled=shuffle([...item.opts]);
+  const optsHtml=shuffled.map((o,i)=>`<button class="opt" onclick="chooseQuiz(this)">${esc(o)}</button>`).join('');
+  document.getElementById('stage').innerHTML=`
+    <div class="card">
+      <div class="scen">${esc(item.scen)}</div>
+      <div class="q">${esc(item.q)}</div>
+      <div>${optsHtml}</div>
+      <div class="nav">
+        <button class="btn yellow" id="nextBtn" onclick="skipQuiz()">Пропустить</button>
+      </div>
+    </div>`;
+}
+
+function skipQuiz(){
+  if(answered)return;
+  answered=true;
+  const item=deck[idx];
+  document.querySelectorAll('.opt').forEach(b=>{
+    b.classList.add('disabled');
+    if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
+  });
+  wrong.push(idx);
+  toNextBtn();
+}
+function chooseQuiz(btn){
+  if(answered)return;
+  answered=true;
+  const item=deck[idx];
+  const chosen=btn.textContent;
+  const isRight=norm(chosen)===norm(item.correct);
+  document.querySelectorAll('.opt').forEach(b=>{
+    b.classList.add('disabled');
+    if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
+  });
+  if(!isRight){btn.classList.add('wrong');wrong.push(idx)}
+  toNextBtn();
+}
+function toNextBtn(){
+  const nb=document.getElementById('nextBtn');
+  nb.classList.remove('yellow');
+  nb.classList.add('green');
+  nb.textContent=idx===deck.length-1?'Результат':'Далее →';
+  nb.onclick=advance;
+}
+function advance(){idx++;if(idx>=deck.length)finish();else render()}
+
+function finish(){
+  const total=deck.length, right=total-wrong.length, pct=Math.round(100*right/total);
+  saveResult(right,total);
+  document.getElementById('pbar').style.width='100%';
+  document.getElementById('progressText').textContent=`${total}/${total}`;
+  const c=colorFor(pct);
+  const verdict = pct>=80?'🏆 Сдано (≥80%)':pct>=70?'⚠️ На грани (70-79%)':'❌ Не сдано (<70%)';
+  let reviewHtml='';
+  if(wrong.length){
+    reviewHtml='<div class="review"><h3>Ошибки (' + wrong.length + ')</h3>';
+    wrong.forEach(i=>{
+      const it=deck[i];
+      reviewHtml+=`<div class="review-item"><b>${esc(it.q)}</b><br><small style="color:#666">${esc(it.scen.slice(0,200))}${it.scen.length>200?'…':''}</small><div class="ck">✓ ${esc(it.correct)}</div></div>`;
+    });
+    reviewHtml+='</div>';
+  } else {
+    reviewHtml='<div class="review"><h3>Ошибок нет 🎉</h3></div>';
+  }
+  document.getElementById('stage').innerHTML=`
+    <div class="result">
+      <div class="score ${c}">${right} / ${total}</div>
+      <div class="verdict">${verdict} · ${pct}%</div>
+      <div class="nav">
+        <button class="btn dark" onclick="startExam()">Ещё раз</button>
+        <a class="btn secondary" href="index.html" style="text-decoration:none;text-align:center;line-height:22px">К темам</a>
+      </div>
+      ${reviewHtml}
+    </div>`;
+}
+
+// Load all topics and their items, dedupe by scen+q
+async function loadAll(){
+  try {
+    const topics = await fetch('data/topics.json').then(r=>r.json());
+    const bundles = await Promise.all(topics.map(t => fetch('data/'+t.id+'.json').then(r=>r.json())));
+    const seen = new Set();
+    const all = [];
+    for(const items of bundles){
+      for(const it of items){
+        const key = (it.scen||'') + '|' + (it.q||'');
+        if(!seen.has(key)){ seen.add(key); all.push(it); }
+      }
+    }
+    ALL_ITEMS = all;
+    showIntro();
+  } catch(e){
+    document.getElementById('stage').innerHTML='<div style="color:#c00">Ошибка загрузки: '+e.message+'</div>';
+  }
+}
+loadAll();
+</script>
+</body></html>

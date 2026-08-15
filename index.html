@@ -5,14 +5,15 @@
 <meta name="theme-color" content="#0066cc">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>АиР — подготовка</title>
+<title>Тесты АиР</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,system-ui,sans-serif;max-width:820px;margin:0 auto;padding:14px;background:#f2f4f7;color:#1a1a1a;line-height:1.4}
-.head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 h1{font-size:22px;margin:0}
-.sub{color:#666;font-size:13px;margin-bottom:16px}
-.qr-btn{background:#0066cc;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600;cursor:pointer}
+.head-actions{display:flex;gap:6px}
+.action-btn{background:#0066cc;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.action-btn.exam{background:#8b1a1a}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .tile{background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:8px;transition:transform .1s}
 .tile:active{transform:scale(.97)}
@@ -38,10 +39,12 @@ footer{margin-top:20px;padding:10px;text-align:center;font-size:11px;color:#999}
 </head><body>
 
 <div class="head">
-  <h1>АиР — подготовка</h1>
-  <button id="qrBtn" class="qr-btn" style="display:none" onclick="showQR()">📤 QR</button>
+  <h1>Тесты АиР</h1>
+  <div class="head-actions">
+    <a href="exam.html" class="action-btn exam">🎓 Экзамен</a>
+    <button id="qrBtn" class="action-btn" style="display:none" onclick="showQR()">📤 QR</button>
+  </div>
 </div>
-<div class="sub">Порог «Московский врач»: 80%</div>
 
 <div class="grid" id="grid">Загрузка…</div>
 
@@ -56,7 +59,7 @@ footer{margin-top:20px;padding:10px;text-align:center;font-size:11px;color:#999}
 
 <footer>
   Прогресс хранится локально в этом браузере ·
-  <a href="#" onclick="if(confirm('Сбросить всю статистику по всем темам?')){Object.keys(localStorage).filter(k=>k.startsWith('stats_')||k.startsWith('lastCycle_')).forEach(k=>localStorage.removeItem(k));location.reload()}return false" style="color:#999">Сброс всего</a>
+  <a href="#" onclick="if(confirm('Сбросить всю статистику по всем темам?')){Object.keys(localStorage).filter(k=>k.startsWith('stats_')||k.startsWith('lastCycle_')||k.startsWith('exam_')).forEach(k=>localStorage.removeItem(k));location.reload()}return false" style="color:#999">Сброс всего</a>
 </footer>
 
 <script src="qrcode.min.js"></script>
@@ -75,7 +78,7 @@ if (params.get('admin') === ADMIN_TOKEN) {
   history.replaceState({}, '', location.pathname);
 }
 const isAdmin = localStorage.getItem('admin_flag') === '1';
-if (isAdmin) document.getElementById('qrBtn').style.display = 'block';
+if (isAdmin) document.getElementById('qrBtn').style.display = 'inline-flex';
 
 function showQR(){
   const url = location.origin + location.pathname;
