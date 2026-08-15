@@ -1,9 +1,21 @@
 [
   {
+    "id": "cpr",
+    "name": "СЛР",
+    "emoji": "❤️‍🔥",
+    "count": 8
+  },
+  {
+    "id": "preop",
+    "name": "Предоперационный осмотр",
+    "emoji": "🩺",
+    "count": 7
+  },
+  {
     "id": "cardiology",
     "name": "Кардиология",
     "emoji": "❤️",
-    "count": 57
+    "count": 52
   },
   {
     "id": "neuro",
@@ -69,7 +81,7 @@
     "id": "anesthesia",
     "name": "Общая анестезиология",
     "emoji": "💉",
-    "count": 87
+    "count": 78
   },
   {
     "id": "brain_death",
@@ -81,18 +93,6 @@
     "id": "other",
     "name": "Прочее",
     "emoji": "🗂️",
-    "count": 110
-  },
-  {
-    "id": "cpr",
-    "name": "СЛР ⭐",
-    "emoji": "❤️‍🔥",
-    "count": 8
-  },
-  {
-    "id": "preop",
-    "name": "Предоперационный осмотр ⭐",
-    "emoji": "🩺",
-    "count": 7
+    "count": 109
   }
 ]

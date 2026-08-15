@@ -1,9 +1,11 @@
-const CACHE = 'air-v4';
+const CACHE = 'air-v5';
 const ASSETS = [
   "./",
   "./index.html",
   "./topic.html",
   "./exam.html",
+  "./app.css",
+  "./app.js",
   "./manifest.webmanifest",
   "./qrcode.min.js",
   "./data/anesthesia.json",

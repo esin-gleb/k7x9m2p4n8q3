@@ -5,47 +5,8 @@
 <meta name="theme-color" content="#0066cc">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>АиР</title>
-<style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,system-ui,sans-serif;max-width:720px;margin:0 auto;padding:12px;background:#f2f4f7;color:#1a1a1a;line-height:1.5}
-.header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.back{background:#fff;border:1.5px solid #ddd;border-radius:8px;padding:8px 12px;font-size:15px;font-weight:600;cursor:pointer;color:#333;text-decoration:none}
-h1{font-size:20px;margin:0;flex:1}
-.modes{display:flex;gap:6px;margin-bottom:12px}
-.mode-btn{flex:1;padding:10px;background:#fff;border:1.5px solid #ddd;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;color:#555}
-.mode-btn.active{background:#0066cc;color:#fff;border-color:#0066cc}
-.progress-wrap{height:6px;background:#e0e0e0;border-radius:3px;margin-bottom:12px;overflow:hidden}
-.progress-bar{height:100%;background:#0066cc;transition:width .3s}
-.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px}
-.scen{font-size:15px;margin-bottom:14px;white-space:pre-wrap}
-.q{font-weight:600;font-size:16px;margin-bottom:14px}
-.answer-reveal{background:#f0f7ff;border-left:4px solid #0066cc;padding:12px 14px;margin:14px 0;font-weight:700;font-size:16px;border-radius:4px}
-.opt{display:block;width:100%;text-align:left;padding:12px 14px;margin:6px 0;background:#fafafa;border:1.5px solid #ddd;border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;color:#222}
-.opt.correct{background:#d4edda;border-color:#28a745}
-.opt.wrong{background:#f8d7da;border-color:#dc3545}
-.opt.disabled{cursor:default}
-.nav{display:flex;gap:8px;margin-top:12px}
-.btn{flex:1;padding:14px;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;background:#0066cc}
-.btn.secondary{background:#666}
-.btn.green{background:#28a745}
-.btn.red{background:#dc3545}
-.btn.yellow{background:#f0ad00;color:#fff}
-.btn.ghost{background:#fff;color:#333;border:1.5px solid #ccc}
-.result{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.score{font-size:40px;font-weight:700;margin:12px 0}
-.score.g{color:#28a745}
-.score.y{color:#e69500}
-.score.r{color:#dc3545}
-.verdict{font-size:15px;color:#555;margin-bottom:14px}
-.review{text-align:left;margin-top:20px}
-.review-item{border-left:4px solid #dc3545;padding:10px 12px;margin:8px 0;background:#fff5f5;border-radius:4px;font-size:14px}
-.review-item .ck{color:#28a745;margin-top:6px;font-weight:600}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#555;flex-wrap:wrap;gap:8px}
-.stats{background:#fff;border-radius:8px;padding:10px;font-size:12px;color:#555;margin-bottom:10px;display:flex;justify-content:space-around;text-align:center}
-.stats div b{display:block;font-size:15px;color:#0066cc}
-.stats div small{display:block;font-size:10px;color:#888}
-</style>
+<link rel="stylesheet" href="app.css">
+<title>Тема · Тесты АиР</title>
 </head><body>
 
 <div class="header">
@@ -58,52 +19,87 @@ h1{font-size:20px;margin:0;flex:1}
   <button class="mode-btn" id="modeQuiz" onclick="setMode('quiz')">✅ Тест</button>
 </div>
 
-<div class="stats" id="stats"></div>
+<div class="stats-banner" id="statsBanner"></div>
 <div class="progress-wrap"><div class="progress-bar" id="pbar" style="width:0%"></div></div>
-<div class="topbar"><span id="progressText"></span><button class="btn ghost" style="padding:4px 10px;font-size:12px;flex:0" onclick="resetStats()">Сброс темы</button></div>
+<div class="topbar"><span id="progressText"></span><button class="action-btn ghost" style="padding:4px 10px;font-size:12px" onclick="resetTopic()">Сброс темы</button></div>
 
 <div id="stage">Загрузка…</div>
 
+<script src="app.js"></script>
 <script>
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(console.error))}
+registerSW();
 
 const params = new URLSearchParams(location.search);
 const TOPIC_ID = params.get('id') || 'cpr';
-const STATS_KEY = 'stats_' + TOPIC_ID;
-const CYCLE_CRAM_KEY = 'lastCycle_'+TOPIC_ID+'_cram';
-const CYCLE_QUIZ_KEY = 'lastCycle_'+TOPIC_ID+'_quiz';
-
-let ITEMS = [];
+let ALL_ITEMS = [];
+let TOPIC_NAME = '';
 let mode='cram', deck=[], idx=0, wrong=[], answered=false;
 
-function loadStats(){try{return JSON.parse(localStorage.getItem(STATS_KEY))||{cram:{total:0,right:0,runs:0},quiz:{total:0,right:0,runs:0}}}catch(e){return {cram:{total:0,right:0,runs:0},quiz:{total:0,right:0,runs:0}}}}
-function saveStats(s){localStorage.setItem(STATS_KEY,JSON.stringify(s))}
-function colorFor(pct){if(pct>=80)return 'g';if(pct>=70)return 'y';return 'r'}
-
-function renderStats(){
-  const s=loadStats();
-  const cp=s.cram.total?Math.round(100*s.cram.right/s.cram.total):0;
-  const qp=s.quiz.total?Math.round(100*s.quiz.right/s.quiz.total):0;
-  document.getElementById('stats').innerHTML=
-    `<div>🧠 Зубрёжка (всего)<b>${cp}%</b><small>${s.cram.right}/${s.cram.total}, ${s.cram.runs} прох.</small></div>
-     <div>✅ Тест (всего)<b>${qp}%</b><small>${s.quiz.right}/${s.quiz.total}, ${s.quiz.runs} прох.</small></div>`;
+function refreshStatsBanner(){
+  const total = ALL_ITEMS.length;
+  const mastered = getMastered(TOPIC_ID).size;
+  const pct = total ? Math.round(100*mastered/total) : 0;
+  const last = getLastResult(TOPIC_ID);
+  const lastHtml = last ? ` · Посл. результат: <span class="${passClass(last.pct)}"><b>${last.pct}%</b></span>` : '';
+  document.getElementById('statsBanner').innerHTML = `
+    <span>Освоено: <span class="m-count">${mastered}/${total}</span></span>
+    <div class="bar-mini"><div style="width:${pct}%"></div></div>
+    <span>${pct}%${lastHtml}</span>`;
 }
-function resetStats(){if(!confirm('Обнулить статистику по этой теме?'))return;localStorage.removeItem(STATS_KEY);localStorage.removeItem(CYCLE_CRAM_KEY);localStorage.removeItem(CYCLE_QUIZ_KEY);renderStats()}
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function norm(s){return s.replace(/\s+/g,' ').trim().toLowerCase()}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+function resetTopic(){
+  if(!confirm('Сбросить весь прогресс по этой теме?')) return;
+  localStorage.removeItem('mastered_'+TOPIC_ID);
+  localStorage.removeItem('lastResult_'+TOPIC_ID);
+  refreshStatsBanner();
+  setMode(mode);
+}
 
 function setMode(m){
-  mode=m;
-  document.getElementById('modeCram').classList.toggle('active',m==='cram');
-  document.getElementById('modeQuiz').classList.toggle('active',m==='quiz');
+  const mastered = getMastered(TOPIC_ID);
+  const unmasteredCount = ALL_ITEMS.filter(x=>!mastered.has(x.id)).length;
+  // Block cram if all mastered
+  if (m==='cram' && unmasteredCount === 0){
+    document.getElementById('modeCram').classList.remove('active');
+    document.getElementById('modeCram').disabled = true;
+    document.getElementById('modeQuiz').classList.add('active');
+    document.getElementById('modeQuiz').disabled = false;
+    document.getElementById('stage').innerHTML = `
+      <div class="empty-state">
+        <h3>🎉 Тема пройдена</h3>
+        <p>Все ${ALL_ITEMS.length} задач помечены как освоенные.</p>
+        <p>Запусти тест, чтобы проверить знания — задачи, где ошибёшься, вернутся в зубрёжку.</p>
+        <div class="nav" style="margin-top:16px">
+          <button class="btn" onclick="setMode('quiz')">Перейти к тесту →</button>
+        </div>
+      </div>`;
+    document.getElementById('pbar').style.width='0%';
+    document.getElementById('progressText').textContent='';
+    return;
+  }
+  document.getElementById('modeCram').disabled = false;
+  document.getElementById('modeQuiz').disabled = false;
+  mode = m;
+  document.getElementById('modeCram').classList.toggle('active', m==='cram');
+  document.getElementById('modeQuiz').classList.toggle('active', m==='quiz');
   startRun(false);
 }
+
 function startRun(onlyWrong){
-  const src=onlyWrong&&wrong.length?wrong.map(i=>ITEMS[i]):ITEMS;
-  deck=shuffle([...src.keys()]).map(i=>({item:src[i],origIdx:onlyWrong?wrong[i]:i}));
+  const mastered = getMastered(TOPIC_ID);
+  let pool;
+  if (onlyWrong && wrong.length){
+    pool = wrong.map(i=>ALL_ITEMS[i]);
+  } else if (mode==='cram'){
+    pool = ALL_ITEMS.filter(x=>!mastered.has(x.id));
+    if (!pool.length){ setMode('cram'); return; } // hits empty-state
+  } else {
+    pool = ALL_ITEMS; // full test always
+  }
+  deck = shuffle(pool.map((item)=>({item, origIdx: ALL_ITEMS.indexOf(item)})));
   idx=0; wrong=[]; render();
 }
+
 function updateProgress(){
   const pct=Math.round(100*idx/deck.length);
   document.getElementById('pbar').style.width=pct+'%';
@@ -127,12 +123,12 @@ function render(){
       </div>`;
   } else {
     const shuffled=shuffle([...item.opts]);
-    const optsHtml=shuffled.map((o,i)=>`<button class="opt" data-i="${i}" onclick="chooseQuiz(this)">${esc(o)}</button>`).join('');
+    const optsHtml=shuffled.map(o=>`<button class="opt" onclick="chooseQuiz(this)">${esc(o)}</button>`).join('');
     stage.innerHTML=`
       <div class="card">
         <div class="scen">${esc(item.scen)}</div>
         <div class="q">${esc(item.q)}</div>
-        <div id="optsBox">${optsHtml}</div>
+        <div>${optsHtml}</div>
         <div class="nav">
           <button class="btn yellow" id="nextBtn" onclick="skipQuiz()">Пропустить</button>
         </div>
@@ -147,22 +143,26 @@ function revealCram(){
     <button class="btn red" onclick="rateCram(false)">Не помню</button>
     <button class="btn green" onclick="rateCram(true)">Помню</button>`;
 }
-function rateCram(ok){if(!ok)wrong.push(deck[idx].origIdx);advance()}
+function rateCram(ok){
+  const {item}=deck[idx];
+  if(ok){ markMastered(TOPIC_ID, item.id); }
+  else  { markUnmastered(TOPIC_ID, item.id); wrong.push(deck[idx].origIdx); }
+  advance();
+}
 
 function skipQuiz(){
-  if(answered)return;
-  answered=true;
+  if(answered)return; answered=true;
   const {item}=deck[idx];
   document.querySelectorAll('.opt').forEach(b=>{
     b.classList.add('disabled');
     if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
   });
+  markUnmastered(TOPIC_ID, item.id);
   wrong.push(deck[idx].origIdx);
-  toGreenNext();
+  toNextBtn();
 }
 function chooseQuiz(btn){
-  if(answered)return;
-  answered=true;
+  if(answered)return; answered=true;
   const {item}=deck[idx];
   const chosen=btn.textContent;
   const isRight=norm(chosen)===norm(item.correct);
@@ -170,45 +170,42 @@ function chooseQuiz(btn){
     b.classList.add('disabled');
     if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
   });
-  if(!isRight){btn.classList.add('wrong');wrong.push(deck[idx].origIdx)}
-  toGreenNext();
+  if(isRight){ markMastered(TOPIC_ID, item.id); }
+  else { btn.classList.add('wrong'); markUnmastered(TOPIC_ID, item.id); wrong.push(deck[idx].origIdx); }
+  toNextBtn();
 }
-function toGreenNext(){
+function toNextBtn(){
   const nb=document.getElementById('nextBtn');
-  nb.classList.remove('yellow');
-  nb.classList.add('green');
+  nb.classList.remove('yellow'); nb.classList.add('green');
   nb.textContent=idx===deck.length-1?'Результат':'Далее →';
   nb.onclick=advance;
 }
-
 function advance(){idx++;if(idx>=deck.length)finish();else render()}
 
 function finish(){
   const total=deck.length, right=total-wrong.length, pct=Math.round(100*right/total);
-  const s=loadStats();
-  s[mode].total+=total; s[mode].right+=right; s[mode].runs+=1;
-  saveStats(s);
-  // save last cycle for dashboard
-  const cycleKey = mode==='cram'?CYCLE_CRAM_KEY:CYCLE_QUIZ_KEY;
-  localStorage.setItem(cycleKey, JSON.stringify({right,total}));
-  renderStats();
+  // Save last result only for quiz mode
+  if (mode==='quiz'){ setLastResult(TOPIC_ID, pct); }
+  refreshStatsBanner();
   document.getElementById('pbar').style.width='100%';
   document.getElementById('progressText').textContent=`${total}/${total}`;
-  const c=colorFor(pct);
-  const verdict = pct>=80?'🏆 Сдано (≥80%)':pct>=70?'⚠️ На грани (70-79%)':'❌ Не сдано (<70%)';
+  const c=passClass(pct);
+  const verdict = pct>=80?'🏆 Сдано (≥80%)':'❌ Не сдано (<80%)';
   let reviewHtml='';
   if(wrong.length){
     reviewHtml='<div class="review"><h3>Ошибки</h3>';
     wrong.forEach(i=>{
-      const it=ITEMS[i];
-      reviewHtml+=`<div class="review-item"><b>${esc(it.cram_q||it.q)}</b><br><small style="color:#666">${esc((it.cram_key||it.scen).slice(0,200))}</small><div class="ck">✓ ${esc(it.correct)}</div></div>`;
+      const it=ALL_ITEMS[i];
+      reviewHtml+=`<div class="review-item"><b>${esc(it.cram_q||it.q)}</b><br><small style="color:#666">${esc((it.cram_key||it.scen).slice(0,250))}</small><div class="ck">✓ ${esc(it.correct)}</div></div>`;
     });
     reviewHtml+='</div>';
   } else {
     reviewHtml='<div class="review"><h3>Ошибок нет 🎉</h3></div>';
   }
+  const modeLabel = mode==='cram' ? 'Зубрёжка' : 'Тест';
   document.getElementById('stage').innerHTML=`
     <div class="result">
+      <div style="color:#666;font-size:13px">${modeLabel}</div>
       <div class="score ${c}">${right} / ${total}</div>
       <div class="verdict">${verdict} · ${pct}%</div>
       <div class="nav">
@@ -219,16 +216,16 @@ function finish(){
     </div>`;
 }
 
-// bootstrap
 fetch('data/topics.json').then(r=>r.json()).then(topics=>{
   const t=topics.find(x=>x.id===TOPIC_ID);
-  document.title = (t?t.name:'?') + ' — АиР';
-  document.getElementById('title').textContent = t?t.name:TOPIC_ID;
+  TOPIC_NAME = t ? t.name : TOPIC_ID;
+  document.title = TOPIC_NAME + ' — АиР';
+  document.getElementById('title').textContent = (t?.emoji||'') + ' ' + TOPIC_NAME;
   return fetch('data/'+TOPIC_ID+'.json');
 }).then(r=>r.json()).then(items=>{
-  ITEMS=items;
-  renderStats();
+  ALL_ITEMS=items;
+  refreshStatsBanner();
   setMode('cram');
-}).catch(e=>{document.getElementById('stage').innerHTML='<div style="color:#c00">Ошибка загрузки темы: '+e.message+'</div>'});
+}).catch(e=>{document.getElementById('stage').innerHTML='<div style="color:#c00">Ошибка: '+e.message+'</div>'});
 </script>
 </body></html>

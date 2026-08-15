@@ -1,0 +1,93 @@
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,system-ui,sans-serif;max-width:820px;margin:0 auto;padding:14px;background:#f2f4f7;color:#1a1a1a;line-height:1.4}
+h1{font-size:22px;margin:0}
+.head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.head-actions{display:flex;gap:6px}
+.action-btn{background:#0066cc;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.action-btn.exam{background:#8b1a1a}
+.action-btn.ghost{background:#fff;color:#333;border:1.5px solid #ddd}
+
+/* Tiles */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:8px;transition:transform .1s;border:1px solid transparent}
+.tile:active{transform:scale(.97)}
+.tile.pass{background:#e8efe4;border-color:#c7d3bd}
+.tile.fail{background:#f0dcd8;border-color:#dcc1bd}
+.tile-title{font-weight:600;font-size:15px;line-height:1.25;min-height:2.5em}
+.tile-count{font-size:11px;color:#666}
+.tile-progress{font-size:12px;color:#555;display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+.tile-progress .pct{font-weight:700}
+.pct.pass, .txt-pass{color:#28a745}
+.pct.fail, .txt-fail{color:#c0392b}
+.mastered-bar{height:5px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-top:2px}
+.mastered-bar-fill{height:100%;background:#28a745;transition:width .3s}
+
+/* Topic / exam pages */
+.header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.back{background:#fff;border:1.5px solid #ddd;border-radius:8px;padding:8px 12px;font-size:15px;font-weight:600;cursor:pointer;color:#333;text-decoration:none}
+.modes{display:flex;gap:6px;margin-bottom:12px}
+.mode-btn{flex:1;padding:10px;background:#fff;border:1.5px solid #ddd;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;color:#555}
+.mode-btn.active{background:#0066cc;color:#fff;border-color:#0066cc}
+.mode-btn:disabled{opacity:.5;cursor:not-allowed}
+.progress-wrap{height:6px;background:#e0e0e0;border-radius:3px;margin-bottom:12px;overflow:hidden}
+.progress-bar{height:100%;background:#0066cc;transition:width .3s}
+.progress-bar.exam{background:#8b1a1a}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#555;flex-wrap:wrap;gap:8px}
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px}
+.scen{font-size:15px;margin-bottom:14px;white-space:pre-wrap}
+.q{font-weight:600;font-size:16px;margin-bottom:14px}
+.answer-reveal{background:#f0f7ff;border-left:4px solid #0066cc;padding:12px 14px;margin:14px 0;font-weight:700;font-size:16px;border-radius:4px}
+.opt{display:block;width:100%;text-align:left;padding:12px 14px;margin:6px 0;background:#fafafa;border:1.5px solid #ddd;border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;color:#222}
+.opt.correct{background:#d4edda;border-color:#28a745}
+.opt.wrong{background:#f8d7da;border-color:#dc3545}
+.opt.disabled{cursor:default}
+.nav{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:14px;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;background:#0066cc;text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center}
+.btn.secondary{background:#666}
+.btn.green{background:#28a745}
+.btn.red{background:#dc3545}
+.btn.yellow{background:#f0ad00;color:#fff}
+.btn.dark{background:#8b1a1a}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Stats banner on topic page */
+.stats-banner{background:#fff;border-radius:8px;padding:10px 12px;font-size:12px;color:#555;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stats-banner .m-count{font-weight:700;color:#0066cc}
+.stats-banner .bar-mini{flex:1;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;max-width:150px}
+.stats-banner .bar-mini > div{height:100%;background:#28a745}
+
+/* Result screen */
+.result{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.score{font-size:40px;font-weight:700;margin:12px 0}
+.score.pass{color:#28a745}
+.score.fail{color:#c0392b}
+.verdict{font-size:15px;color:#555;margin-bottom:14px}
+.review{text-align:left;margin-top:20px}
+.review-item{border-left:4px solid #dc3545;padding:10px 12px;margin:8px 0;background:#fff5f5;border-radius:4px;font-size:14px}
+.review-item .ck{color:#28a745;margin-top:6px;font-weight:600}
+
+/* Stats page (post-exam) */
+.stats-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;background:#fff;border-radius:8px;overflow:hidden}
+.stats-table th, .stats-table td{padding:10px 12px;text-align:left;border-bottom:1px solid #eee}
+.stats-table th{background:#f5f7f9;font-size:12px;color:#666;text-transform:uppercase}
+.stats-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+.stats-table td.pct{font-weight:700;text-align:right}
+.stats-table tr.pass{background:#e8efe4}
+.stats-table tr.fail{background:#f0dcd8}
+.stats-table tr.neutral{background:#fff}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal.show{display:flex}
+.modal-body{background:#fff;border-radius:12px;padding:20px;max-width:340px;width:100%;text-align:center}
+.modal-body h3{margin:0 0 12px;font-size:18px}
+.modal-body .qr-container{background:#fff;padding:12px;border-radius:8px;display:flex;justify-content:center;margin-bottom:12px}
+.modal-body p{font-size:13px;color:#666;margin:8px 0;word-break:break-all}
+.modal-body button{margin-top:12px;padding:10px 20px;background:#666;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;width:100%}
+
+/* Empty state (all mastered) */
+.empty-state{background:#e8efe4;border:1px solid #c7d3bd;border-radius:12px;padding:28px 20px;text-align:center;color:#3c5f37}
+.empty-state h3{margin:0 0 10px;font-size:20px}
+.empty-state p{margin:6px 0;font-size:14px}
+
+footer{margin-top:20px;padding:10px;text-align:center;font-size:11px;color:#999}
