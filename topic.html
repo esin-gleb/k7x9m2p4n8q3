@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0066cc">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>АиР</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,system-ui,sans-serif;max-width:720px;margin:0 auto;padding:12px;background:#f2f4f7;color:#1a1a1a;line-height:1.5}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.back{background:#fff;border:1.5px solid #ddd;border-radius:8px;padding:8px 12px;font-size:15px;font-weight:600;cursor:pointer;color:#333;text-decoration:none}
+h1{font-size:20px;margin:0;flex:1}
+.modes{display:flex;gap:6px;margin-bottom:12px}
+.mode-btn{flex:1;padding:10px;background:#fff;border:1.5px solid #ddd;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;color:#555}
+.mode-btn.active{background:#0066cc;color:#fff;border-color:#0066cc}
+.progress-wrap{height:6px;background:#e0e0e0;border-radius:3px;margin-bottom:12px;overflow:hidden}
+.progress-bar{height:100%;background:#0066cc;transition:width .3s}
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px}
+.scen{font-size:15px;margin-bottom:14px;white-space:pre-wrap}
+.q{font-weight:600;font-size:16px;margin-bottom:14px}
+.answer-reveal{background:#f0f7ff;border-left:4px solid #0066cc;padding:12px 14px;margin:14px 0;font-weight:700;font-size:16px;border-radius:4px}
+.opt{display:block;width:100%;text-align:left;padding:12px 14px;margin:6px 0;background:#fafafa;border:1.5px solid #ddd;border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;color:#222}
+.opt.correct{background:#d4edda;border-color:#28a745}
+.opt.wrong{background:#f8d7da;border-color:#dc3545}
+.opt.disabled{cursor:default}
+.nav{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:14px;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;background:#0066cc}
+.btn.secondary{background:#666}
+.btn.green{background:#28a745}
+.btn.red{background:#dc3545}
+.btn.yellow{background:#f0ad00;color:#fff}
+.btn.ghost{background:#fff;color:#333;border:1.5px solid #ccc}
+.result{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.score{font-size:40px;font-weight:700;margin:12px 0}
+.score.g{color:#28a745}
+.score.y{color:#e69500}
+.score.r{color:#dc3545}
+.verdict{font-size:15px;color:#555;margin-bottom:14px}
+.review{text-align:left;margin-top:20px}
+.review-item{border-left:4px solid #dc3545;padding:10px 12px;margin:8px 0;background:#fff5f5;border-radius:4px;font-size:14px}
+.review-item .ck{color:#28a745;margin-top:6px;font-weight:600}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#555;flex-wrap:wrap;gap:8px}
+.stats{background:#fff;border-radius:8px;padding:10px;font-size:12px;color:#555;margin-bottom:10px;display:flex;justify-content:space-around;text-align:center}
+.stats div b{display:block;font-size:15px;color:#0066cc}
+.stats div small{display:block;font-size:10px;color:#888}
+</style>
+</head><body>
+
+<div class="header">
+  <a class="back" href="index.html">← Темы</a>
+  <h1 id="title">…</h1>
+</div>
+
+<div class="modes">
+  <button class="mode-btn active" id="modeCram" onclick="setMode('cram')">🧠 Зубрёжка</button>
+  <button class="mode-btn" id="modeQuiz" onclick="setMode('quiz')">✅ Тест</button>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="progress-wrap"><div class="progress-bar" id="pbar" style="width:0%"></div></div>
+<div class="topbar"><span id="progressText"></span><button class="btn ghost" style="padding:4px 10px;font-size:12px;flex:0" onclick="resetStats()">Сброс темы</button></div>
+
+<div id="stage">Загрузка…</div>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(console.error))}
+
+const params = new URLSearchParams(location.search);
+const TOPIC_ID = params.get('id') || 'cpr';
+const STATS_KEY = 'stats_' + TOPIC_ID;
+const CYCLE_CRAM_KEY = 'lastCycle_'+TOPIC_ID+'_cram';
+const CYCLE_QUIZ_KEY = 'lastCycle_'+TOPIC_ID+'_quiz';
+
+let ITEMS = [];
+let mode='cram', deck=[], idx=0, wrong=[], answered=false;
+
+function loadStats(){try{return JSON.parse(localStorage.getItem(STATS_KEY))||{cram:{total:0,right:0,runs:0},quiz:{total:0,right:0,runs:0}}}catch(e){return {cram:{total:0,right:0,runs:0},quiz:{total:0,right:0,runs:0}}}}
+function saveStats(s){localStorage.setItem(STATS_KEY,JSON.stringify(s))}
+function colorFor(pct){if(pct>=80)return 'g';if(pct>=70)return 'y';return 'r'}
+
+function renderStats(){
+  const s=loadStats();
+  const cp=s.cram.total?Math.round(100*s.cram.right/s.cram.total):0;
+  const qp=s.quiz.total?Math.round(100*s.quiz.right/s.quiz.total):0;
+  document.getElementById('stats').innerHTML=
+    `<div>🧠 Зубрёжка (всего)<b>${cp}%</b><small>${s.cram.right}/${s.cram.total}, ${s.cram.runs} прох.</small></div>
+     <div>✅ Тест (всего)<b>${qp}%</b><small>${s.quiz.right}/${s.quiz.total}, ${s.quiz.runs} прох.</small></div>`;
+}
+function resetStats(){if(!confirm('Обнулить статистику по этой теме?'))return;localStorage.removeItem(STATS_KEY);localStorage.removeItem(CYCLE_CRAM_KEY);localStorage.removeItem(CYCLE_QUIZ_KEY);renderStats()}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function norm(s){return s.replace(/\s+/g,' ').trim().toLowerCase()}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('modeCram').classList.toggle('active',m==='cram');
+  document.getElementById('modeQuiz').classList.toggle('active',m==='quiz');
+  startRun(false);
+}
+function startRun(onlyWrong){
+  const src=onlyWrong&&wrong.length?wrong.map(i=>ITEMS[i]):ITEMS;
+  deck=shuffle([...src.keys()]).map(i=>({item:src[i],origIdx:onlyWrong?wrong[i]:i}));
+  idx=0; wrong=[]; render();
+}
+function updateProgress(){
+  const pct=Math.round(100*idx/deck.length);
+  document.getElementById('pbar').style.width=pct+'%';
+  document.getElementById('progressText').textContent=`${idx+1} / ${deck.length}`;
+}
+
+function render(){
+  answered=false;
+  updateProgress();
+  const {item}=deck[idx];
+  const stage=document.getElementById('stage');
+  if(mode==='cram'){
+    stage.innerHTML=`
+      <div class="card">
+        <div class="scen">${esc(item.cram_key)}</div>
+        <div class="q">${esc(item.cram_q)}</div>
+        <div id="answerArea"></div>
+        <div class="nav" id="cramNav">
+          <button class="btn" onclick="revealCram()">Показать ответ</button>
+        </div>
+      </div>`;
+  } else {
+    const shuffled=shuffle([...item.opts]);
+    const optsHtml=shuffled.map((o,i)=>`<button class="opt" data-i="${i}" onclick="chooseQuiz(this)">${esc(o)}</button>`).join('');
+    stage.innerHTML=`
+      <div class="card">
+        <div class="scen">${esc(item.scen)}</div>
+        <div class="q">${esc(item.q)}</div>
+        <div id="optsBox">${optsHtml}</div>
+        <div class="nav">
+          <button class="btn yellow" id="nextBtn" onclick="skipQuiz()">Пропустить</button>
+        </div>
+      </div>`;
+  }
+}
+
+function revealCram(){
+  const {item}=deck[idx];
+  document.getElementById('answerArea').innerHTML=`<div class="answer-reveal">${esc(item.correct)}</div>`;
+  document.getElementById('cramNav').innerHTML=`
+    <button class="btn red" onclick="rateCram(false)">Не помню</button>
+    <button class="btn green" onclick="rateCram(true)">Помню</button>`;
+}
+function rateCram(ok){if(!ok)wrong.push(deck[idx].origIdx);advance()}
+
+function skipQuiz(){
+  if(answered)return;
+  answered=true;
+  const {item}=deck[idx];
+  document.querySelectorAll('.opt').forEach(b=>{
+    b.classList.add('disabled');
+    if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
+  });
+  wrong.push(deck[idx].origIdx);
+  toGreenNext();
+}
+function chooseQuiz(btn){
+  if(answered)return;
+  answered=true;
+  const {item}=deck[idx];
+  const chosen=btn.textContent;
+  const isRight=norm(chosen)===norm(item.correct);
+  document.querySelectorAll('.opt').forEach(b=>{
+    b.classList.add('disabled');
+    if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
+  });
+  if(!isRight){btn.classList.add('wrong');wrong.push(deck[idx].origIdx)}
+  toGreenNext();
+}
+function toGreenNext(){
+  const nb=document.getElementById('nextBtn');
+  nb.classList.remove('yellow');
+  nb.classList.add('green');
+  nb.textContent=idx===deck.length-1?'Результат':'Далее →';
+  nb.onclick=advance;
+}
+
+function advance(){idx++;if(idx>=deck.length)finish();else render()}
+
+function finish(){
+  const total=deck.length, right=total-wrong.length, pct=Math.round(100*right/total);
+  const s=loadStats();
+  s[mode].total+=total; s[mode].right+=right; s[mode].runs+=1;
+  saveStats(s);
+  // save last cycle for dashboard
+  const cycleKey = mode==='cram'?CYCLE_CRAM_KEY:CYCLE_QUIZ_KEY;
+  localStorage.setItem(cycleKey, JSON.stringify({right,total}));
+  renderStats();
+  document.getElementById('pbar').style.width='100%';
+  document.getElementById('progressText').textContent=`${total}/${total}`;
+  const c=colorFor(pct);
+  const verdict = pct>=80?'🏆 Сдано (≥80%)':pct>=70?'⚠️ На грани (70-79%)':'❌ Не сдано (<70%)';
+  let reviewHtml='';
+  if(wrong.length){
+    reviewHtml='<div class="review"><h3>Ошибки</h3>';
+    wrong.forEach(i=>{
+      const it=ITEMS[i];
+      reviewHtml+=`<div class="review-item"><b>${esc(it.cram_q||it.q)}</b><br><small style="color:#666">${esc((it.cram_key||it.scen).slice(0,200))}</small><div class="ck">✓ ${esc(it.correct)}</div></div>`;
+    });
+    reviewHtml+='</div>';
+  } else {
+    reviewHtml='<div class="review"><h3>Ошибок нет 🎉</h3></div>';
+  }
+  document.getElementById('stage').innerHTML=`
+    <div class="result">
+      <div class="score ${c}">${right} / ${total}</div>
+      <div class="verdict">${verdict} · ${pct}%</div>
+      <div class="nav">
+        <button class="btn" onclick="startRun(false)">Пройти заново</button>
+        <button class="btn secondary" ${wrong.length?'':'disabled'} onclick="startRun(true)">Только ошибки</button>
+      </div>
+      ${reviewHtml}
+    </div>`;
+}
+
+// bootstrap
+fetch('data/topics.json').then(r=>r.json()).then(topics=>{
+  const t=topics.find(x=>x.id===TOPIC_ID);
+  document.title = (t?t.name:'?') + ' — АиР';
+  document.getElementById('title').textContent = t?t.name:TOPIC_ID;
+  return fetch('data/'+TOPIC_ID+'.json');
+}).then(r=>r.json()).then(items=>{
+  ITEMS=items;
+  renderStats();
+  setMode('cram');
+}).catch(e=>{document.getElementById('stage').innerHTML='<div style="color:#c00">Ошибка загрузки темы: '+e.message+'</div>'});
+</script>
+</body></html>
