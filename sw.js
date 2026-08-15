@@ -1,4 +1,4 @@
-const CACHE = 'air-v5';
+const CACHE = 'air-v6';
 const ASSETS = [
   "./",
   "./index.html",

@@ -190,7 +190,8 @@ function finish(){
   document.getElementById('pbar').style.width='100%';
   document.getElementById('progressText').textContent=`${total}/${total}`;
   const c=passClass(pct);
-  const verdict = pct>=80?'🏆 Сдано (≥80%)':'❌ Не сдано (<80%)';
+  const passed = pct>=80;
+  const verdict = passed?'🏆 Сдано (≥80%)':'❌ Не сдано (<80%)';
   let reviewHtml='';
   if(wrong.length){
     reviewHtml='<div class="review"><h3>Ошибки</h3>';
@@ -200,18 +201,21 @@ function finish(){
     });
     reviewHtml+='</div>';
   } else {
-    reviewHtml='<div class="review"><h3>Ошибок нет 🎉</h3></div>';
+    reviewHtml='<div class="review empty"><h3>Ошибок нет 🎉</h3></div>';
   }
   const modeLabel = mode==='cram' ? 'Зубрёжка' : 'Тест';
+  const buttonsHtml = passed
+    ? `<div class="nav"><a class="btn secondary" href="index.html">← К темам</a></div>`
+    : `<div class="nav">
+         <button class="btn" onclick="startRun(false)">Повторить</button>
+         <a class="btn secondary" href="index.html">← К темам</a>
+       </div>`;
   document.getElementById('stage').innerHTML=`
     <div class="result">
       <div style="color:#666;font-size:13px">${modeLabel}</div>
       <div class="score ${c}">${right} / ${total}</div>
       <div class="verdict">${verdict} · ${pct}%</div>
-      <div class="nav">
-        <button class="btn" onclick="startRun(false)">Пройти заново</button>
-        <button class="btn secondary" ${wrong.length?'':'disabled'} onclick="startRun(true)">Только ошибки</button>
-      </div>
+      ${buttonsHtml}
       ${reviewHtml}
     </div>`;
 }

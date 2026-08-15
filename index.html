@@ -54,10 +54,11 @@ function renderTile(t){
   const total = t.count;
   const masteredPct = Math.round(100*mastered/total);
   const last = getLastResult(t.id);
-  const tileClass = last ? passClass(last.pct) : '';
+  // Default = fail (red). Green only if last result ≥80%.
+  const tileClass = (last && last.pct >= 80) ? 'pass' : 'fail';
   const lastLine = last
     ? `<div class="tile-progress"><span>Посл. результат</span><span class="pct ${passClass(last.pct)}">${last.pct}%</span></div>`
-    : `<div class="tile-progress" style="color:#999;font-style:italic">— ещё не проходили</div>`;
+    : `<div class="tile-progress" style="color:#7a5150;font-style:italic">— ещё не проходили</div>`;
   return `<a class="tile ${tileClass}" href="topic.html?id=${t.id}">
     <div class="tile-title">${t.emoji||''} ${t.name}</div>
     <div class="tile-count">${total} задач · освоено ${mastered}</div>

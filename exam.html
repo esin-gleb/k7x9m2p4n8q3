@@ -154,7 +154,8 @@ function finish(){
 
 function showStats(byTopic, right, total, pct){
   const c = passClass(pct);
-  const verdict = pct>=80?'🏆 Сдано (≥80%)':'❌ Не сдано (<80%)';
+  const passed = pct>=80;
+  const verdict = passed?'🏆 Сдано (≥80%)':'❌ Не сдано (<80%)';
   // build stats table
   const rows = Object.entries(byTopic).map(([tid, st])=>{
     const t = TOPICS.find(x=>x.id===tid);
@@ -186,16 +187,22 @@ function showStats(byTopic, right, total, pct){
       </div>`;
     });
     errorsHtml += '</div>';
+  } else {
+    errorsHtml = '<div class="review empty"><h3>Ошибок нет 🎉</h3></div>';
   }
+
+  const buttonsHtml = passed
+    ? `<div class="nav"><a class="btn secondary" href="index.html">← К темам</a></div>`
+    : `<div class="nav">
+         <button class="btn dark" onclick="startExam()">Повторить</button>
+         <a class="btn secondary" href="index.html">← К темам</a>
+       </div>`;
 
   document.getElementById('stage').innerHTML = `
     <div class="result">
       <div class="score ${c}">${right} / ${total}</div>
       <div class="verdict">${verdict} · ${pct}%</div>
-      <div class="nav">
-        <a class="btn secondary" href="index.html">← На дашборд</a>
-        <button class="btn dark" onclick="startExam()">Ещё раз</button>
-      </div>
+      ${buttonsHtml}
       <h3 style="text-align:left;margin-top:24px">По темам</h3>
       <p style="text-align:left;font-size:12px;color:#888;margin:0 0 8px">
         Цветом отмечены темы, где было больше ${MIN_TOPIC_QS} вопросов.
