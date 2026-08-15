@@ -1,4 +1,98 @@
 [
-  {"id":"cpr","name":"СЛР","emoji":"❤️","count":8},
-  {"id":"preop","name":"Предоперационный осмотр","emoji":"🩺","count":7}
+  {
+    "id": "cardiology",
+    "name": "Кардиология",
+    "emoji": "❤️",
+    "count": 57
+  },
+  {
+    "id": "neuro",
+    "name": "Неврология / нейрореанимация",
+    "emoji": "🧠",
+    "count": 22
+  },
+  {
+    "id": "infection",
+    "name": "Инфекция",
+    "emoji": "🦠",
+    "count": 47
+  },
+  {
+    "id": "sepsis",
+    "name": "Сепсис",
+    "emoji": "🩸",
+    "count": 26
+  },
+  {
+    "id": "obstetrics",
+    "name": "Акушерство",
+    "emoji": "🤰",
+    "count": 7
+  },
+  {
+    "id": "shock",
+    "name": "Шок и анафилаксия",
+    "emoji": "⚡",
+    "count": 12
+  },
+  {
+    "id": "respiratory",
+    "name": "Дыхательная система",
+    "emoji": "🫁",
+    "count": 19
+  },
+  {
+    "id": "surgery",
+    "name": "Абдоминальная хирургия",
+    "emoji": "🔪",
+    "count": 24
+  },
+  {
+    "id": "renal",
+    "name": "Почки / печень / метаболизм",
+    "emoji": "🧪",
+    "count": 19
+  },
+  {
+    "id": "nutrition",
+    "name": "Питание в ОРИТ",
+    "emoji": "🍽️",
+    "count": 13
+  },
+  {
+    "id": "toxicology",
+    "name": "Токсикология",
+    "emoji": "☣️",
+    "count": 9
+  },
+  {
+    "id": "anesthesia",
+    "name": "Общая анестезиология",
+    "emoji": "💉",
+    "count": 87
+  },
+  {
+    "id": "brain_death",
+    "name": "Констатация смерти",
+    "emoji": "🕯️",
+    "count": 2
+  },
+  {
+    "id": "other",
+    "name": "Прочее",
+    "emoji": "🗂️",
+    "count": 110
+  },
+  {
+    "id": "cpr",
+    "name": "СЛР ⭐",
+    "emoji": "❤️‍🔥",
+    "count": 8
+  },
+  {
+    "id": "preop",
+    "name": "Предоперационный осмотр ⭐",
+    "emoji": "🩺",
+    "count": 7
+  }
 ]
