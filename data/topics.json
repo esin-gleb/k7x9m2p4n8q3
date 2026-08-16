@@ -15,31 +15,31 @@
     "id": "cardiology",
     "name": "Кардиология",
     "emoji": "❤️",
-    "count": 52
+    "count": 78
   },
   {
     "id": "neuro",
     "name": "Неврология / нейрореанимация",
     "emoji": "🧠",
-    "count": 22
+    "count": 40
   },
   {
     "id": "infection",
     "name": "Инфекция",
     "emoji": "🦠",
-    "count": 47
+    "count": 69
   },
   {
     "id": "sepsis",
     "name": "Сепсис",
     "emoji": "🩸",
-    "count": 26
+    "count": 30
   },
   {
     "id": "obstetrics",
     "name": "Акушерство",
     "emoji": "🤰",
-    "count": 7
+    "count": 21
   },
   {
     "id": "shock",
@@ -51,19 +51,19 @@
     "id": "respiratory",
     "name": "Дыхательная система",
     "emoji": "🫁",
-    "count": 19
+    "count": 25
   },
   {
     "id": "surgery",
     "name": "Абдоминальная хирургия",
     "emoji": "🔪",
-    "count": 24
+    "count": 35
   },
   {
     "id": "renal",
     "name": "Почки / печень / метаболизм",
     "emoji": "🧪",
-    "count": 19
+    "count": 26
   },
   {
     "id": "nutrition",
@@ -81,18 +81,12 @@
     "id": "anesthesia",
     "name": "Общая анестезиология",
     "emoji": "💉",
-    "count": 78
+    "count": 79
   },
   {
     "id": "brain_death",
     "name": "Констатация смерти",
     "emoji": "🕯️",
     "count": 2
-  },
-  {
-    "id": "other",
-    "name": "Прочее",
-    "emoji": "🗂️",
-    "count": 109
   }
 ]
