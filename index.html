@@ -13,6 +13,7 @@
   <h1>Тесты АиР</h1>
   <div class="head-actions">
     <a href="exam.html" class="action-btn exam">🎓 Экзамен</a>
+    <button id="exportBtn" class="action-btn" style="display:none;background:#555" onclick="exportOverrides()">💾</button>
     <button id="qrBtn" class="action-btn" style="display:none" onclick="showQR()">📤 QR</button>
   </div>
 </div>
@@ -30,7 +31,7 @@
 
 <footer>
   Прогресс хранится локально в этом браузере ·
-  <a href="#" onclick="if(confirm('Сбросить ВЕСЬ прогресс: освоенные задачи, историю тестов и экзаменов?')){Object.keys(localStorage).filter(k=>k.startsWith('mastered_')||k.startsWith('lastResult_')||k.startsWith('exam_')).forEach(k=>localStorage.removeItem(k));location.reload()}return false" style="color:#999">Сброс всего</a>
+  <a href="#" onclick="if(confirm('Сбросить ВЕСЬ прогресс: освоенные задачи, историю тестов, экзаменов, переносы тем?')){Object.keys(localStorage).filter(k=>k.startsWith('mastered_')||k.startsWith('lastResult_')||k.startsWith('exam_')||k==='topicOverrides').forEach(k=>localStorage.removeItem(k));location.reload()}return false" style="color:#999">Сброс всего</a>
 </footer>
 
 <script src="qrcode.min.js"></script>
@@ -38,7 +39,10 @@
 <script>
 registerSW();
 const isAdmin = checkAdminGate();
-if (isAdmin) document.getElementById('qrBtn').style.display = 'inline-flex';
+if (isAdmin) {
+  document.getElementById('qrBtn').style.display = 'inline-flex';
+  document.getElementById('exportBtn').style.display = 'inline-flex';
+}
 
 function showQR(){
   const url = location.origin + location.pathname;
@@ -49,26 +53,45 @@ function showQR(){
 }
 function hideQR(){ document.getElementById('qrModal').classList.remove('show') }
 
-function renderTile(t){
-  const mastered = getMastered(t.id).size;
-  const total = t.count;
-  const masteredPct = Math.round(100*mastered/total);
-  const last = getLastResult(t.id);
-  // Default = fail (red). Green only if last result ≥80%.
-  const tileClass = (last && last.pct >= 80) ? 'pass' : 'fail';
-  const lastLine = last
-    ? `<div class="tile-progress"><span>Посл. результат</span><span class="pct ${passClass(last.pct)}">${last.pct}%</span></div>`
-    : `<div class="tile-progress" style="color:#7a5150;font-style:italic">— ещё не проходили</div>`;
-  return `<a class="tile ${tileClass}" href="topic.html?id=${t.id}">
-    <div class="tile-title">${t.emoji||''} ${t.name}</div>
-    <div class="tile-count">${total} задач · освоено ${mastered}</div>
-    <div class="mastered-bar"><div class="mastered-bar-fill" style="width:${masteredPct}%"></div></div>
-    ${lastLine}
-  </a>`;
+function exportOverrides(){
+  const o = getOverrides();
+  const data = { exported_at: new Date().toISOString(), overrides: o };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'overrides_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); URL.revokeObjectURL(url);
 }
 
-fetch('data/topics.json').then(r=>r.json()).then(topics=>{
-  document.getElementById('grid').innerHTML = topics.map(renderTile).join('');
-}).catch(e=>{document.getElementById('grid').innerHTML='<div style="color:#c00">Ошибка: '+e.message+'</div>'});
+async function render(){
+  const topics = await fetch('data/topics.json').then(r=>r.json());
+  const allItems = await loadAllItems(topics);
+  const counts = countPerTopic(allItems);
+
+  const tiles = topics.map(t=>{
+    const total = counts[t.id] || 0;
+    // Hide "other" if empty
+    if (t.id === 'other' && total === 0) return '';
+    const masteredIds = getMastered(t.id);
+    // Only count mastered IDs that are actually in this topic now (effective)
+    const currentIds = new Set(itemsForTopic(allItems, t.id).map(x=>x.id));
+    let mastered = 0;
+    masteredIds.forEach(id=>{ if(currentIds.has(id)) mastered++; });
+    const masteredPct = total ? Math.round(100*mastered/total) : 0;
+    const last = getLastResult(t.id);
+    const tileClass = (last && last.pct >= 80) ? 'pass' : 'fail';
+    const lastLine = last
+      ? `<div class="tile-progress"><span>Посл. результат</span><span class="pct ${passClass(last.pct)}">${last.pct}%</span></div>`
+      : `<div class="tile-progress" style="color:#7a5150;font-style:italic">— ещё не проходили</div>`;
+    return `<a class="tile ${tileClass}" href="topic.html?id=${t.id}">
+      <div class="tile-title">${t.emoji||''} ${t.name}</div>
+      <div class="tile-count">${total} задач · освоено ${mastered}</div>
+      <div class="mastered-bar"><div class="mastered-bar-fill" style="width:${masteredPct}%"></div></div>
+      ${lastLine}
+    </a>`;
+  }).filter(x=>x).join('');
+  document.getElementById('grid').innerHTML = tiles;
+}
+render().catch(e=>{document.getElementById('grid').innerHTML='<div style="color:#c00">Ошибка: '+e.message+'</div>'});
 </script>
 </body></html>

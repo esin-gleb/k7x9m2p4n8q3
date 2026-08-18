@@ -1,4 +1,4 @@
-const CACHE = 'air-v7';
+const CACHE = 'air-v8';
 const ASSETS = [
   "./",
   "./index.html",
@@ -16,6 +16,7 @@ const ASSETS = [
   "./data/neuro.json",
   "./data/nutrition.json",
   "./data/obstetrics.json",
+  "./data/other.json",
   "./data/preop.json",
   "./data/renal.json",
   "./data/respiratory.json",

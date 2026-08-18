@@ -215,12 +215,13 @@ function showStats(byTopic, right, total, pct){
     </div>`;
 }
 
-// Load all topics: attach _topic to each item
+// Load all topics: attach _topic to each item (respect overrides)
 async function loadAll(){
   try {
     TOPICS = await fetch('data/topics.json').then(r=>r.json());
-    const bundles = await Promise.all(TOPICS.map(t => fetch('data/'+t.id+'.json').then(r=>r.json()).then(items=>items.map(x=>({...x, _topic: t.id})))));
-    ALL = [].concat(...bundles);
+    const raw = await loadAllItems(TOPICS); // items with _origTopic
+    // Apply overrides: set _topic = effectiveTopic
+    ALL = raw.map(it => ({...it, _topic: effectiveTopic(it)}));
     showIntro();
   } catch(e){
     document.getElementById('stage').innerHTML='<div style="color:#c00">Ошибка: '+e.message+'</div>';

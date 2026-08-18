@@ -32,7 +32,11 @@ h1{font-size:22px;margin:0}
 .progress-bar{height:100%;background:#0066cc;transition:width .3s}
 .progress-bar.exam{background:#8b1a1a}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#555;flex-wrap:wrap;gap:8px}
-.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px}
+/* Card change-topic btn */
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px;position:relative}
+.change-topic-btn{position:absolute;top:8px;right:8px;background:#f0f0f0;color:#555;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.change-topic-btn:active{background:#e0e0e0}
+.card .scen{padding-right:80px}
 .scen{font-size:15px;margin-bottom:14px;white-space:pre-wrap}
 .q{font-weight:600;font-size:16px;margin-bottom:14px}
 .answer-reveal{background:#f0f7ff;border-left:4px solid #0066cc;padding:12px 14px;margin:14px 0;font-weight:700;font-size:16px;border-radius:4px}
@@ -85,6 +89,13 @@ h1{font-size:22px;margin:0}
 .modal-body .qr-container{background:#fff;padding:12px;border-radius:8px;display:flex;justify-content:center;margin-bottom:12px}
 .modal-body p{font-size:13px;color:#666;margin:8px 0;word-break:break-all}
 .modal-body button{margin-top:12px;padding:10px 20px;background:#666;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;width:100%}
+.modal-body .select-topic{width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:15px;margin:8px 0;font-family:inherit;background:#fff}
+.modal-body .modal-actions{display:flex;gap:6px;margin-top:12px}
+.modal-body .modal-actions button{flex:1;margin-top:0}
+.modal-body .btn-primary{background:#0066cc}
+.modal-body .btn-cancel{background:#666}
+.modal-body .btn-restore{background:#fff;color:#333;border:1.5px solid #ccc;margin-top:8px;font-size:13px}
+.modal-body .cur-topic{font-size:12px;color:#888;margin-bottom:6px}
 
 /* Empty state (all mastered) */
 .empty-state{background:#e8efe4;border:1px solid #c7d3bd;border-radius:12px;padding:28px 20px;text-align:center;color:#3c5f37}

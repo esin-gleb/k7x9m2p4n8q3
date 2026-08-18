@@ -15,8 +15,8 @@
 </div>
 
 <div class="modes">
-  <button class="mode-btn active" id="modeCram" onclick="setMode('cram')">🧠 Зубрёжка</button>
-  <button class="mode-btn" id="modeQuiz" onclick="setMode('quiz')">✅ Тест</button>
+  <button class="mode-btn active" id="modeQuiz" onclick="setMode('quiz')">✅ Тест</button>
+  <button class="mode-btn" id="modeCram" onclick="setMode('cram')">🧠 Повторение</button>
 </div>
 
 <div class="stats-banner" id="statsBanner"></div>
@@ -25,19 +25,44 @@
 
 <div id="stage">Загрузка…</div>
 
+<div id="moveModal" class="modal" onclick="if(event.target===this)hideMoveModal()">
+  <div class="modal-body">
+    <h3>Переместить в тему</h3>
+    <div class="cur-topic" id="curTopicLine"></div>
+    <select class="select-topic" id="targetTopic">
+      <option value="">— выбери тему —</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="hideMoveModal()">Отмена</button>
+      <button class="btn-primary" id="moveConfirmBtn" onclick="doMove()" disabled>Переместить</button>
+    </div>
+    <button class="btn-restore" id="restoreBtn" style="display:none" onclick="doRestore()">Вернуть на исходную</button>
+  </div>
+</div>
+
 <script src="app.js"></script>
 <script>
 registerSW();
 
 const params = new URLSearchParams(location.search);
 const TOPIC_ID = params.get('id') || 'cpr';
-let ALL_ITEMS = [];
+let TOPICS = [];
+let ALL_ITEMS_RAW = []; // all items across all topics with _origTopic
+let TOPIC_ITEMS = [];   // items belonging to current effective topic
 let TOPIC_NAME = '';
-let mode='cram', deck=[], idx=0, wrong=[], answered=false;
+let mode='quiz', deck=[], idx=0, wrong=[], answered=false;
+let currentEditingItem = null;
+
+function recomputeTopicItems(){
+  TOPIC_ITEMS = itemsForTopic(ALL_ITEMS_RAW, TOPIC_ID);
+}
 
 function refreshStatsBanner(){
-  const total = ALL_ITEMS.length;
-  const mastered = getMastered(TOPIC_ID).size;
+  const total = TOPIC_ITEMS.length;
+  const masteredIds = getMastered(TOPIC_ID);
+  const currentIds = new Set(TOPIC_ITEMS.map(x=>x.id));
+  let mastered = 0;
+  masteredIds.forEach(id=>{ if(currentIds.has(id)) mastered++; });
   const pct = total ? Math.round(100*mastered/total) : 0;
   const last = getLastResult(TOPIC_ID);
   const lastHtml = last ? ` · Посл. результат: <span class="${passClass(last.pct)}"><b>${last.pct}%</b></span>` : '';
@@ -48,7 +73,7 @@ function refreshStatsBanner(){
 }
 
 function resetTopic(){
-  if(!confirm('Сбросить весь прогресс по этой теме?')) return;
+  if(!confirm('Сбросить весь прогресс по этой теме (освоенные, последний результат)?')) return;
   localStorage.removeItem('mastered_'+TOPIC_ID);
   localStorage.removeItem('lastResult_'+TOPIC_ID);
   refreshStatsBanner();
@@ -56,19 +81,18 @@ function resetTopic(){
 }
 
 function setMode(m){
-  const mastered = getMastered(TOPIC_ID);
-  const unmasteredCount = ALL_ITEMS.filter(x=>!mastered.has(x.id)).length;
+  const masteredIds = getMastered(TOPIC_ID);
+  const unmasteredCount = TOPIC_ITEMS.filter(x=>!masteredIds.has(x.id)).length;
   // Block cram if all mastered
   if (m==='cram' && unmasteredCount === 0){
     document.getElementById('modeCram').classList.remove('active');
     document.getElementById('modeCram').disabled = true;
     document.getElementById('modeQuiz').classList.add('active');
-    document.getElementById('modeQuiz').disabled = false;
     document.getElementById('stage').innerHTML = `
       <div class="empty-state">
         <h3>🎉 Тема пройдена</h3>
-        <p>Все ${ALL_ITEMS.length} задач помечены как освоенные.</p>
-        <p>Запусти тест, чтобы проверить знания — задачи, где ошибёшься, вернутся в зубрёжку.</p>
+        <p>Все ${TOPIC_ITEMS.length} задач помечены как освоенные.</p>
+        <p>Запусти тест, чтобы проверить знания — задачи, где ошибёшься, вернутся в повторение.</p>
         <div class="nav" style="margin-top:16px">
           <button class="btn" onclick="setMode('quiz')">Перейти к тесту →</button>
         </div>
@@ -77,8 +101,7 @@ function setMode(m){
     document.getElementById('progressText').textContent='';
     return;
   }
-  document.getElementById('modeCram').disabled = false;
-  document.getElementById('modeQuiz').disabled = false;
+  document.getElementById('modeCram').disabled = (unmasteredCount === 0);
   mode = m;
   document.getElementById('modeCram').classList.toggle('active', m==='cram');
   document.getElementById('modeQuiz').classList.toggle('active', m==='quiz');
@@ -86,17 +109,21 @@ function setMode(m){
 }
 
 function startRun(onlyWrong){
-  const mastered = getMastered(TOPIC_ID);
+  const masteredIds = getMastered(TOPIC_ID);
   let pool;
   if (onlyWrong && wrong.length){
-    pool = wrong.map(i=>ALL_ITEMS[i]);
+    pool = wrong.map(i=>TOPIC_ITEMS[i]).filter(Boolean);
   } else if (mode==='cram'){
-    pool = ALL_ITEMS.filter(x=>!mastered.has(x.id));
-    if (!pool.length){ setMode('cram'); return; } // hits empty-state
+    pool = TOPIC_ITEMS.filter(x=>!masteredIds.has(x.id));
+    if (!pool.length){ setMode('cram'); return; }
   } else {
-    pool = ALL_ITEMS; // full test always
+    pool = TOPIC_ITEMS;
   }
-  deck = shuffle(pool.map((item)=>({item, origIdx: ALL_ITEMS.indexOf(item)})));
+  if (!pool.length){
+    document.getElementById('stage').innerHTML = '<div class="empty-state"><p>В теме нет задач.</p></div>';
+    return;
+  }
+  deck = shuffle(pool.map((item)=>({item, origIdx: TOPIC_ITEMS.indexOf(item)})));
   idx=0; wrong=[]; render();
 }
 
@@ -106,14 +133,20 @@ function updateProgress(){
   document.getElementById('progressText').textContent=`${idx+1} / ${deck.length}`;
 }
 
+function changeTopicBtn(){
+  return `<button class="change-topic-btn" onclick="showMoveModal()">↦ Тема</button>`;
+}
+
 function render(){
   answered=false;
   updateProgress();
   const {item}=deck[idx];
+  currentEditingItem = item;
   const stage=document.getElementById('stage');
   if(mode==='cram'){
     stage.innerHTML=`
       <div class="card">
+        ${changeTopicBtn()}
         <div class="scen">${esc(item.cram_key)}</div>
         <div class="q">${esc(item.cram_q)}</div>
         <div id="answerArea"></div>
@@ -126,6 +159,7 @@ function render(){
     const optsHtml=shuffled.map(o=>`<button class="opt" onclick="chooseQuiz(this)">${esc(o)}</button>`).join('');
     stage.innerHTML=`
       <div class="card">
+        ${changeTopicBtn()}
         <div class="scen">${esc(item.scen)}</div>
         <div class="q">${esc(item.q)}</div>
         <div>${optsHtml}</div>
@@ -184,26 +218,25 @@ function advance(){idx++;if(idx>=deck.length)finish();else render()}
 
 function finish(){
   const total=deck.length, right=total-wrong.length, pct=Math.round(100*right/total);
-  // Save last result only for quiz mode
   if (mode==='quiz'){ setLastResult(TOPIC_ID, pct); }
   refreshStatsBanner();
   document.getElementById('pbar').style.width='100%';
   document.getElementById('progressText').textContent=`${total}/${total}`;
-  const c=passClass(pct);
-  const passed = pct>=80;
+  const c=passClass(pct); const passed = pct>=80;
   const verdict = passed?'🏆 Сдано (≥80%)':'❌ Не сдано (<80%)';
   let reviewHtml='';
   if(wrong.length){
     reviewHtml='<div class="review"><h3>Ошибки</h3>';
     wrong.forEach(i=>{
-      const it=ALL_ITEMS[i];
+      const it=TOPIC_ITEMS[i];
+      if(!it) return;
       reviewHtml+=`<div class="review-item"><b>${esc(it.cram_q||it.q)}</b><br><small style="color:#666">${esc((it.cram_key||it.scen).slice(0,250))}</small><div class="ck">✓ ${esc(it.correct)}</div></div>`;
     });
     reviewHtml+='</div>';
   } else {
     reviewHtml='<div class="review empty"><h3>Ошибок нет 🎉</h3></div>';
   }
-  const modeLabel = mode==='cram' ? 'Зубрёжка' : 'Тест';
+  const modeLabel = mode==='cram' ? 'Повторение' : 'Тест';
   const buttonsHtml = passed
     ? `<div class="nav"><a class="btn secondary" href="index.html">← К темам</a></div>`
     : `<div class="nav">
@@ -220,16 +253,72 @@ function finish(){
     </div>`;
 }
 
-fetch('data/topics.json').then(r=>r.json()).then(topics=>{
-  const t=topics.find(x=>x.id===TOPIC_ID);
-  TOPIC_NAME = t ? t.name : TOPIC_ID;
-  document.title = TOPIC_NAME + ' — АиР';
-  document.getElementById('title').textContent = (t?.emoji||'') + ' ' + TOPIC_NAME;
-  return fetch('data/'+TOPIC_ID+'.json');
-}).then(r=>r.json()).then(items=>{
-  ALL_ITEMS=items;
+// --- Move modal ---
+function showMoveModal(){
+  const item = currentEditingItem;
+  const eff = effectiveTopic(item);
+  const overrides = getOverrides();
+  const hasOverride = overrides[item.id];
+  const curT = TOPICS.find(x=>x.id===eff);
+  document.getElementById('curTopicLine').textContent = 'Сейчас: ' + (curT?curT.emoji+' '+curT.name:eff);
+  const sel = document.getElementById('targetTopic');
+  sel.innerHTML = '<option value="">— выбери тему —</option>' +
+    TOPICS.filter(t=>t.id!==eff).map(t=>`<option value="${t.id}">${t.emoji||''} ${t.name}</option>`).join('');
+  document.getElementById('moveConfirmBtn').disabled = true;
+  sel.onchange = ()=>{ document.getElementById('moveConfirmBtn').disabled = !sel.value };
+  document.getElementById('restoreBtn').style.display = hasOverride ? 'block' : 'none';
+  if (hasOverride){
+    const orig = TOPICS.find(x=>x.id===item._origTopic);
+    document.getElementById('restoreBtn').textContent = 'Вернуть на исходную (' + (orig?orig.name:item._origTopic) + ')';
+  }
+  document.getElementById('moveModal').classList.add('show');
+}
+function hideMoveModal(){ document.getElementById('moveModal').classList.remove('show') }
+function doMove(){
+  const item = currentEditingItem;
+  const target = document.getElementById('targetTopic').value;
+  if (!target) return;
+  setOverride(item.id, target, TOPICS);
+  hideMoveModal();
+  // Задача переехала — пересчитываем и убираем её из текущей темы
+  recomputeTopicItems();
   refreshStatsBanner();
-  setMode('cram');
-}).catch(e=>{document.getElementById('stage').innerHTML='<div style="color:#c00">Ошибка: '+e.message+'</div>'});
+  // Уберём из текущего deck и покажем следующую (или финиш)
+  deck = deck.filter((d,i)=>i<=idx?d:d.item.id!==item.id?d:null).filter(Boolean);
+  // Если текущий элемент был удалён из TOPIC_ITEMS (перенос), просто идём дальше
+  if (idx >= deck.length) finish();
+  else render();
+}
+function doRestore(){
+  const item = currentEditingItem;
+  clearOverride(item.id, TOPICS);
+  hideMoveModal();
+  recomputeTopicItems();
+  refreshStatsBanner();
+  // если задача была в этой теме через override и теперь ушла — advance
+  const stillHere = TOPIC_ITEMS.some(x=>x.id===item.id);
+  if (!stillHere){
+    deck = deck.filter((d,i)=>d.item.id!==item.id);
+    if (idx >= deck.length) finish();
+    else render();
+  }
+}
+
+// bootstrap
+(async ()=>{
+  try {
+    TOPICS = await fetch('data/topics.json').then(r=>r.json());
+    const t = TOPICS.find(x=>x.id===TOPIC_ID);
+    TOPIC_NAME = t ? t.name : TOPIC_ID;
+    document.title = TOPIC_NAME + ' — АиР';
+    document.getElementById('title').textContent = (t?.emoji||'') + ' ' + TOPIC_NAME;
+    ALL_ITEMS_RAW = await loadAllItems(TOPICS);
+    recomputeTopicItems();
+    refreshStatsBanner();
+    setMode('quiz');
+  } catch(e){
+    document.getElementById('stage').innerHTML='<div style="color:#c00">Ошибка: '+e.message+'</div>';
+  }
+})();
 </script>
 </body></html>
