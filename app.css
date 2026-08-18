@@ -33,10 +33,10 @@ h1{font-size:22px;margin:0}
 .progress-bar.exam{background:#8b1a1a}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#555;flex-wrap:wrap;gap:8px}
 /* Card change-topic btn */
-.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px;position:relative}
-.change-topic-btn{position:absolute;top:8px;right:8px;background:#f0f0f0;color:#555;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px}
+.card-actions{display:flex;justify-content:flex-end;margin-bottom:8px}
+.change-topic-btn{background:#f0f0f0;color:#555;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
 .change-topic-btn:active{background:#e0e0e0}
-.card .scen{padding-right:80px}
 .scen{font-size:15px;margin-bottom:14px;white-space:pre-wrap}
 .q{font-weight:600;font-size:16px;margin-bottom:14px}
 .answer-reveal{background:#f0f7ff;border-left:4px solid #0066cc;padding:12px 14px;margin:14px 0;font-weight:700;font-size:16px;border-radius:4px}
