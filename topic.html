@@ -59,49 +59,28 @@ function recomputeTopicItems(){
 
 function refreshStatsBanner(){
   const total = TOPIC_ITEMS.length;
-  const masteredIds = getMastered(TOPIC_ID);
+  const answeredIds = getAnswered(TOPIC_ID);
   const currentIds = new Set(TOPIC_ITEMS.map(x=>x.id));
-  let mastered = 0;
-  masteredIds.forEach(id=>{ if(currentIds.has(id)) mastered++; });
-  const pct = total ? Math.round(100*mastered/total) : 0;
+  let answered = 0;
+  answeredIds.forEach(id=>{ if(currentIds.has(id)) answered++; });
+  const pct = total ? Math.round(100*answered/total) : 0;
   const last = getLastResult(TOPIC_ID);
   const lastHtml = last ? ` · Посл. результат: <span class="${passClass(last.pct)}"><b>${last.pct}%</b></span>` : '';
   document.getElementById('statsBanner').innerHTML = `
-    <span>Освоено: <span class="m-count">${mastered}/${total}</span></span>
+    <span>Отвечено: <span class="m-count">${answered}/${total}</span></span>
     <div class="bar-mini"><div style="width:${pct}%"></div></div>
     <span>${pct}%${lastHtml}</span>`;
 }
 
 function resetTopic(){
-  if(!confirm('Сбросить весь прогресс по этой теме (освоенные, последний результат)?')) return;
-  localStorage.removeItem('mastered_'+TOPIC_ID);
+  if(!confirm('Сбросить весь прогресс по этой теме (отвеченные, последний результат)?')) return;
+  localStorage.removeItem('answered_'+TOPIC_ID);
   localStorage.removeItem('lastResult_'+TOPIC_ID);
   refreshStatsBanner();
   setMode(mode);
 }
 
 function setMode(m){
-  const masteredIds = getMastered(TOPIC_ID);
-  const unmasteredCount = TOPIC_ITEMS.filter(x=>!masteredIds.has(x.id)).length;
-  // Block cram if all mastered
-  if (m==='cram' && unmasteredCount === 0){
-    document.getElementById('modeCram').classList.remove('active');
-    document.getElementById('modeCram').disabled = true;
-    document.getElementById('modeQuiz').classList.add('active');
-    document.getElementById('stage').innerHTML = `
-      <div class="empty-state">
-        <h3>🎉 Тема пройдена</h3>
-        <p>Все ${TOPIC_ITEMS.length} задач помечены как освоенные.</p>
-        <p>Запусти тест, чтобы проверить знания — задачи, где ошибёшься, вернутся в повторение.</p>
-        <div class="nav" style="margin-top:16px">
-          <button class="btn" onclick="setMode('quiz')">Перейти к тесту →</button>
-        </div>
-      </div>`;
-    document.getElementById('pbar').style.width='0%';
-    document.getElementById('progressText').textContent='';
-    return;
-  }
-  document.getElementById('modeCram').disabled = (unmasteredCount === 0);
   mode = m;
   document.getElementById('modeCram').classList.toggle('active', m==='cram');
   document.getElementById('modeQuiz').classList.toggle('active', m==='quiz');
@@ -109,21 +88,19 @@ function setMode(m){
 }
 
 function startRun(onlyWrong){
-  const masteredIds = getMastered(TOPIC_ID);
   let pool;
   if (onlyWrong && wrong.length){
     pool = wrong.map(i=>TOPIC_ITEMS[i]).filter(Boolean);
-  } else if (mode==='cram'){
-    pool = TOPIC_ITEMS.filter(x=>!masteredIds.has(x.id));
-    if (!pool.length){ setMode('cram'); return; }
+    pool = shuffle(pool);
   } else {
-    pool = TOPIC_ITEMS;
+    // Both modes: unanswered first, then answered
+    pool = orderedPool(TOPIC_ITEMS, TOPIC_ID);
   }
   if (!pool.length){
     document.getElementById('stage').innerHTML = '<div class="empty-state"><p>В теме нет задач.</p></div>';
     return;
   }
-  deck = shuffle(pool.map((item)=>({item, origIdx: TOPIC_ITEMS.indexOf(item)})));
+  deck = pool.map((item)=>({item, origIdx: TOPIC_ITEMS.indexOf(item)}));
   idx=0; wrong=[]; render();
 }
 
@@ -134,7 +111,29 @@ function updateProgress(){
 }
 
 function changeTopicBtn(){
-  return `<div class="card-actions"><button class="change-topic-btn" onclick="showMoveModal()">↦ Тема</button></div>`;
+  return `<button class="change-topic-btn" onclick="showMoveModal()">↦ Тема</button>`;
+}
+function trapBadge(item){
+  return isTrap(item.id) ? '<span class="trap-badge" title="Помечен как ловушка">🪤 ловушка</span>' : '';
+}
+function postAnswerRow(item){
+  const trapActive = isTrap(item.id) ? ' active' : '';
+  const url = buildGoogleUrl(item);
+  return `<div class="card-actions" style="margin-top:12px;justify-content:flex-start">
+    <button class="trap-btn${trapActive}" onclick="onToggleTrap()">🪤 ${isTrap(item.id)?'ловушка':'пометить'}</button>
+    <a class="google-btn" href="${url}" target="_blank" rel="noopener" title="Спросить Google (AI Mode)">${GOOGLE_G_SVG}</a>
+  </div>`;
+}
+function onToggleTrap(){
+  toggleTrap(currentEditingItem.id);
+  // rerender post-answer buttons
+  const btn = document.querySelector('.trap-btn');
+  const active = isTrap(currentEditingItem.id);
+  btn.classList.toggle('active', active);
+  btn.innerHTML = '🪤 ' + (active?'ловушка':'пометить');
+  // also refresh badge in card top
+  const badgeSlot = document.getElementById('trapBadgeSlot');
+  if (badgeSlot) badgeSlot.innerHTML = trapBadge(currentEditingItem);
 }
 
 function render(){
@@ -143,11 +142,13 @@ function render(){
   const {item}=deck[idx];
   currentEditingItem = item;
   const stage=document.getElementById('stage');
+  const header = `<div class="card-actions">${changeTopicBtn()}</div>`;
+  const badge = `<span id="trapBadgeSlot">${trapBadge(item)}</span>`;
   if(mode==='cram'){
     stage.innerHTML=`
       <div class="card">
-        ${changeTopicBtn()}
-        <div class="scen">${esc(item.cram_key)}</div>
+        ${header}
+        <div class="scen">${badge}${esc(item.cram_key)}</div>
         <div class="q">${esc(item.cram_q)}</div>
         <div id="answerArea"></div>
         <div class="nav" id="cramNav">
@@ -159,8 +160,8 @@ function render(){
     const optsHtml=shuffled.map(o=>`<button class="opt" onclick="chooseQuiz(this)">${esc(o)}</button>`).join('');
     stage.innerHTML=`
       <div class="card">
-        ${changeTopicBtn()}
-        <div class="scen">${esc(item.scen)}</div>
+        ${header}
+        <div class="scen">${badge}${esc(item.scen)}</div>
         <div class="q">${esc(item.q)}</div>
         <div>${optsHtml}</div>
         <div class="nav">
@@ -172,15 +173,15 @@ function render(){
 
 function revealCram(){
   const {item}=deck[idx];
-  document.getElementById('answerArea').innerHTML=`<div class="answer-reveal">${esc(item.correct)}</div>`;
+  document.getElementById('answerArea').innerHTML=`<div class="answer-reveal">${esc(item.correct)}</div>` + postAnswerRow(item);
   document.getElementById('cramNav').innerHTML=`
     <button class="btn red" onclick="rateCram(false)">Не помню</button>
     <button class="btn green" onclick="rateCram(true)">Помню</button>`;
 }
 function rateCram(ok){
   const {item}=deck[idx];
-  if(ok){ markMastered(TOPIC_ID, item.id); }
-  else  { markUnmastered(TOPIC_ID, item.id); wrong.push(deck[idx].origIdx); }
+  if(ok){ markAnswered(TOPIC_ID, item.id); }
+  else  { markUnanswered(TOPIC_ID, item.id); wrong.push(deck[idx].origIdx); }
   advance();
 }
 
@@ -191,8 +192,9 @@ function skipQuiz(){
     b.classList.add('disabled');
     if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
   });
-  markUnmastered(TOPIC_ID, item.id);
+  markUnanswered(TOPIC_ID, item.id);
   wrong.push(deck[idx].origIdx);
+  appendPostAnswerRow();
   toNextBtn();
 }
 function chooseQuiz(btn){
@@ -204,9 +206,15 @@ function chooseQuiz(btn){
     b.classList.add('disabled');
     if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
   });
-  if(isRight){ markMastered(TOPIC_ID, item.id); }
-  else { btn.classList.add('wrong'); markUnmastered(TOPIC_ID, item.id); wrong.push(deck[idx].origIdx); }
+  if(isRight){ markAnswered(TOPIC_ID, item.id); }
+  else { btn.classList.add('wrong'); markUnanswered(TOPIC_ID, item.id); wrong.push(deck[idx].origIdx); }
+  appendPostAnswerRow();
   toNextBtn();
+}
+function appendPostAnswerRow(){
+  const item = deck[idx].item;
+  const nav = document.querySelector('.nav');
+  nav.insertAdjacentHTML('beforebegin', postAnswerRow(item));
 }
 function toNextBtn(){
   const nb=document.getElementById('nextBtn');

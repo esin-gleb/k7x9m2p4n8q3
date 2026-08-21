@@ -3,7 +3,7 @@
     "id": "cpr",
     "name": "СЛР",
     "emoji": "❤️‍🔥",
-    "count": 8
+    "count": 7
   },
   {
     "id": "preop",
@@ -15,7 +15,7 @@
     "id": "cardiology",
     "name": "Кардиология",
     "emoji": "❤️",
-    "count": 78
+    "count": 77
   },
   {
     "id": "neuro",
@@ -27,7 +27,7 @@
     "id": "infection",
     "name": "Инфекция",
     "emoji": "🦠",
-    "count": 69
+    "count": 70
   },
   {
     "id": "sepsis",
@@ -81,7 +81,7 @@
     "id": "anesthesia",
     "name": "Общая анестезиология",
     "emoji": "💉",
-    "count": 79
+    "count": 80
   },
   {
     "id": "brain_death",

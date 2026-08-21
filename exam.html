@@ -25,13 +25,20 @@
 <script>
 registerSW();
 
-const EXAM_SIZE = 100;
-const MIN_TOPIC_QS = 5; // порог для окрашивания темы по результату экзамена
-const HISTORY_KEY = 'exam_history';
+const params = new URLSearchParams(location.search);
+const IS_MINI = params.get('size') === '20';
+const EXAM_SIZE = IS_MINI ? 20 : 100;
+const MIN_TOPIC_QS = 5;
+const HISTORY_KEY = IS_MINI ? 'mini_history' : 'exam_history';
 
-let TOPICS = [];        // topic meta
-let ALL = [];           // dedupe not needed after new data — but keep for safety
+let TOPICS = [];
+let ALL = [];
 let deck = [], idx = 0, wrong = [], answered = false;
+let currentEditingItem = null;
+
+// Titles
+document.title = (IS_MINI ? 'Мини-экзамен' : 'Экзамен') + ' · Тесты АиР';
+document.querySelector('h1').textContent = IS_MINI ? '🎲 Мини-экзамен' : '🎓 Экзамен';
 
 function loadHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||[]}catch(e){return []}}
 function saveHistory(entry){
@@ -41,7 +48,7 @@ function saveHistory(entry){
 }
 
 function showIntro(){
-  const h = loadHistory();
+  const h = IS_MINI ? [] : loadHistory();
   let historyHtml = '';
   if(h.length){
     historyHtml = '<div class="stats-banner" style="flex-direction:column;align-items:stretch;gap:6px"><b style="text-align:left">Прошлые попытки:</b>';
@@ -52,14 +59,18 @@ function showIntro(){
     });
     historyHtml += '</div>';
   }
+  const title = IS_MINI ? 'Мини-экзамен' : 'Тестовый экзамен';
+  const desc = IS_MINI
+    ? `20 случайных вопросов из ${ALL.length} задач всей базы. Быстрая проверка.`
+    : `${Math.min(EXAM_SIZE, ALL.length)} случайных вопросов из ${ALL.length} задач всей базы.`;
   document.getElementById('stage').innerHTML = `
     ${historyHtml}
     <div class="result">
-      <h2 style="margin-top:0">Тестовый экзамен</h2>
-      <p style="color:#555">${Math.min(EXAM_SIZE, ALL.length)} случайных вопросов из ${ALL.length} задач всей базы.</p>
-      <p style="color:#888;font-size:13px">Порог «Московский врач»: 80%. Правильные ответы отмечаются как освоенные, ошибки возвращают задачи в зубрёжку соответствующей темы.</p>
+      <h2 style="margin-top:0">${title}</h2>
+      <p style="color:#555">${desc}</p>
+      <p style="color:#888;font-size:13px">Порог «Московский врач»: 80%. Правильные ответы отмечаются как отвеченные, ошибки возвращают задачи в очередь повторения.</p>
       <div class="nav" style="margin-top:20px">
-        <button class="btn dark" onclick="startExam()">Начать экзамен</button>
+        <button class="btn dark" onclick="startExam()">Начать</button>
       </div>
     </div>`;
 }
@@ -84,17 +95,39 @@ function render(){
   answered=false;
   updateProgress();
   const item=deck[idx];
+  currentEditingItem = item;
   const shuffled=shuffle([...item.opts]);
   const optsHtml=shuffled.map(o=>`<button class="opt" onclick="chooseQuiz(this)">${esc(o)}</button>`).join('');
+  const badge = isTrap(item.id) ? '<span class="trap-badge" title="Помечен как ловушка">🪤 ловушка</span>' : '';
   document.getElementById('stage').innerHTML=`
     <div class="card">
-      <div class="scen">${esc(item.scen)}</div>
+      <div class="scen"><span id="trapBadgeSlot">${badge}</span>${esc(item.scen)}</div>
       <div class="q">${esc(item.q)}</div>
       <div>${optsHtml}</div>
       <div class="nav">
         <button class="btn yellow" id="nextBtn" onclick="skipQuiz()">Пропустить</button>
       </div>
     </div>`;
+}
+
+function onToggleTrap(){
+  toggleTrap(currentEditingItem.id);
+  const btn = document.querySelector('.trap-btn');
+  const active = isTrap(currentEditingItem.id);
+  btn.classList.toggle('active', active);
+  btn.innerHTML = '🪤 ' + (active?'ловушка':'пометить');
+  const slot = document.getElementById('trapBadgeSlot');
+  if (slot) slot.innerHTML = active ? '<span class="trap-badge">🪤 ловушка</span>' : '';
+}
+function appendPostAnswerRow(){
+  const item = currentEditingItem;
+  const trapActive = isTrap(item.id) ? ' active' : '';
+  const url = buildGoogleUrl(item);
+  const html = `<div class="card-actions" style="margin-top:12px;justify-content:flex-start">
+    <button class="trap-btn${trapActive}" onclick="onToggleTrap()">🪤 ${isTrap(item.id)?'ловушка':'пометить'}</button>
+    <a class="google-btn" href="${url}" target="_blank" rel="noopener" title="Google AI">${GOOGLE_G_SVG}</a>
+  </div>`;
+  document.querySelector('.nav').insertAdjacentHTML('beforebegin', html);
 }
 
 function skipQuiz(){
@@ -104,8 +137,9 @@ function skipQuiz(){
     b.classList.add('disabled');
     if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
   });
-  markUnmastered(item._topic, item.id);
+  markUnanswered(item._topic, item.id);
   wrong.push(idx);
+  appendPostAnswerRow();
   toNextBtn();
 }
 function chooseQuiz(btn){
@@ -117,8 +151,9 @@ function chooseQuiz(btn){
     b.classList.add('disabled');
     if(norm(b.textContent)===norm(item.correct))b.classList.add('correct');
   });
-  if(isRight){ markMastered(item._topic, item.id); }
-  else { btn.classList.add('wrong'); markUnmastered(item._topic, item.id); wrong.push(idx); }
+  if(isRight){ markAnswered(item._topic, item.id); }
+  else { btn.classList.add('wrong'); markUnanswered(item._topic, item.id); wrong.push(idx); }
+  appendPostAnswerRow();
   toNextBtn();
 }
 function toNextBtn(){
@@ -143,12 +178,12 @@ function finish(){
   });
   // Update per-topic lastResult only when >MIN_TOPIC_QS
   Object.entries(byTopic).forEach(([tid,st])=>{
-    if (st.n > MIN_TOPIC_QS){
+    if (!IS_MINI && st.n > MIN_TOPIC_QS){
       const p = Math.round(100*st.right/st.n);
       setLastResult(tid, p);
     }
   });
-  saveHistory({date:new Date().toISOString(), right, total, pct});
+  if (!IS_MINI) saveHistory({date:new Date().toISOString(), right, total, pct});
   showStats(byTopic, right, total, pct);
 }
 

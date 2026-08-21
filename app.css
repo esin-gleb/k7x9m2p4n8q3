@@ -34,9 +34,12 @@ h1{font-size:22px;margin:0}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#555;flex-wrap:wrap;gap:8px}
 /* Card change-topic btn */
 .card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:10px}
-.card-actions{display:flex;justify-content:flex-end;margin-bottom:8px}
-.change-topic-btn{background:#f0f0f0;color:#555;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
-.change-topic-btn:active{background:#e0e0e0}
+.card-actions{display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.change-topic-btn,.trap-btn,.google-btn{background:#f0f0f0;color:#555;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
+.change-topic-btn:active,.trap-btn:active,.google-btn:active{background:#e0e0e0}
+.trap-btn.active{background:#fff3cd;border-color:#f0c040;color:#8a6d00}
+.google-btn{background:#fff;padding:3px 8px}
+.trap-badge{display:inline-block;font-size:11px;background:#fff3cd;color:#8a6d00;border:1px solid #f0c040;border-radius:6px;padding:2px 6px;margin-right:6px;font-weight:600}
 .scen{font-size:15px;margin-bottom:14px;white-space:pre-wrap}
 .q{font-weight:600;font-size:16px;margin-bottom:14px}
 .answer-reveal{background:#f0f7ff;border-left:4px solid #0066cc;padding:12px 14px;margin:14px 0;font-weight:700;font-size:16px;border-radius:4px}
